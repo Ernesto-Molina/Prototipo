@@ -61,8 +61,22 @@ const FotoSocial = ({ post, onEnviarCariño, textoMensaje, setTextoMensaje, onEn
         <p className="font-semibold text-base mb-2">{post.likes} Me gusta</p>
         <p className="text-base leading-relaxed"><span className="font-semibold mr-2">{post.user}</span>{post.caption}</p>
         
+        {/* LISTA DE COMENTARIOS */}
+        {post.comentarios && post.comentarios.length > 0 && (
+          <div className="mt-4 flex flex-col gap-2">
+            {post.comentarios.map((c, i) => (
+              <p key={i} className="text-base text-gray-800 bg-gray-50 p-3 rounded-xl border border-gray-100 shadow-sm transition-all animate-in fade-in">
+                <span className="font-bold text-blue-900 mr-2">{c.de}:</span>{c.texto}
+              </p>
+            ))}
+          </div>
+        )}
+
         <div className="mt-4 flex flex-col gap-3">
           <input 
+            id={`comment-input-${post.id}`}
+            name={`commentInput-${post.id}`}
+            aria-label="Escribir un comentario en la publicación"
             className="w-full text-base p-3 border-b-2 border-gray-200 outline-none focus:border-blue-400 bg-transparent placeholder-gray-500" 
             placeholder="Agrega un comentario..." 
             value={textoMensaje} 

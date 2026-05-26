@@ -18,12 +18,16 @@ export const initialPostsFeed = [
     likes: 15, 
     hasLiked: false,
     isSaved: false, 
-    caption: '¡Qué hermoso recuerdo! Compartiendo juntos un momento inolvidable.' 
+    caption: '¡Qué hermoso recuerdo! Compartiendo juntos un momento inolvidable.',
+    comentarios: []
   }
 ];
 
 export const initialPostsVideos = [
-  { id: 101, user: 'Cocinera Juana', image: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800', likes: 500, hasLiked: false, desc: 'Preparando una rica sopa para el invierno.' }
+  { id: 101, user: 'Cocinera Juana', image: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800', likes: 500, hasLiked: false, desc: 'Preparando una rica sopa para el invierno.' },
+  { id: 102, user: 'Jardinería Fácil', image: 'https://images.unsplash.com/photo-1416879598555-5205ff4b2284?w=800', likes: 340, hasLiked: false, desc: 'Mis geranios floreciendo en primavera 🌸' },
+  { id: 103, user: 'Perritos Tiernos', image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800', likes: 1250, hasLiked: false, desc: 'Firulais aprendiendo un nuevo truco 🐶' },
+  { id: 104, user: 'Tejidos y Lanas', image: 'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?w=800', likes: 890, hasLiked: false, desc: 'Terminando esta bufanda calientita para mi nieto.' }
 ];
 
 export const initialChats = [

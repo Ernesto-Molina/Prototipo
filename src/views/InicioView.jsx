@@ -1,16 +1,42 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import FotoSocial from '../components/FotoSocial';
 import { IconClose } from '../components/Icons';
 import { useAngel } from '../context/AngelContext.jsx';
 
 export default function InicioView({ stories, activeStory, setActiveStory, postsFeed, toggleGuardar, enviarCariño, textoMensaje, setTextoMensaje, prepararEnvio }) {
   const { llamarAlAngel } = useAngel();
+  const currentIndex = activeStory ? stories.findIndex(s => s.id === activeStory.id) : -1;
+
+  useEffect(() => {
+    if (!activeStory) return; // No hacer nada si no hay una historia activa
+
+    const manejarTeclado = (e) => {
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        if (currentIndex < stories.length - 1) {
+          setActiveStory(stories[currentIndex + 1]);
+        } else {
+          setActiveStory(null);
+          llamarAlAngel("Ha terminado de ver todas las historias.");
+        }
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        if (currentIndex > 0) {
+          setActiveStory(stories[currentIndex - 1]);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', manejarTeclado);
+    return () => window.removeEventListener('keydown', manejarTeclado);
+  }, [activeStory, currentIndex, stories, setActiveStory, llamarAlAngel]);
+
   return (
     <>
       {/* MODAL DE HISTORIA ACTIVA */}
       {activeStory && (
-        <div className="fixed inset-0 bg-black z-50 flex flex-col">
-          <div className="p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/60 to-transparent absolute top-0 w-full">
+        <div className="fixed inset-0 bg-black z-50 flex flex-col justify-center">
+          <div className="p-4 flex justify-between items-center z-20 bg-gradient-to-b from-black/60 to-transparent absolute top-0 w-full">
              <div className="flex items-center gap-3 text-white">
                 <img src={activeStory.avatar} className="w-10 h-10 rounded-full object-cover border border-white" alt="Avatar" />
                 <span className="font-semibold text-base">{activeStory.user}</span>
@@ -20,7 +46,24 @@ export default function InicioView({ stories, activeStory, setActiveStory, posts
                 <IconClose />
              </button>
           </div>
-          <img src={activeStory.image} className="w-full h-full object-cover" alt="Historia" />
+          <img src={activeStory.image} className="w-full h-full object-contain" alt="Historia" />
+          
+          {/* Botones de navegación (Anterior / Siguiente) */}
+          <div className="absolute inset-0 flex justify-between items-center px-4 pointer-events-none z-10">
+            <button 
+              onClick={(e) => { e.stopPropagation(); if (currentIndex > 0) setActiveStory(stories[currentIndex - 1]); }} 
+              className={`p-3 bg-black/60 text-white rounded-full pointer-events-auto active:scale-95 transition-all ${currentIndex === 0 ? 'opacity-0 cursor-default' : 'opacity-100 hover:bg-black/80'}`}
+              disabled={currentIndex === 0}
+            >
+              <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <button 
+              onClick={(e) => { e.stopPropagation(); if (currentIndex < stories.length - 1) setActiveStory(stories[currentIndex + 1]); else { setActiveStory(null); llamarAlAngel("Ha terminado de ver todas las historias."); } }} 
+              className="p-3 bg-black/60 text-white rounded-full pointer-events-auto active:scale-95 transition-all hover:bg-black/80"
+            >
+              <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+          </div>
         </div>
       )}
 
