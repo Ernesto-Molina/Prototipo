@@ -77,7 +77,7 @@ const FotoSocial = ({ post, onEnviarCariño, textoMensaje, setTextoMensaje, onEn
             id={`comment-input-${post.id}`}
             name={`commentInput-${post.id}`}
             aria-label="Escribir un comentario en la publicación"
-            className="w-full text-base p-3 border-b-2 border-gray-200 outline-none focus:border-blue-400 bg-transparent placeholder-gray-500" 
+            className="w-full text-base p-3 border-b-2 border-gray-200 outline-none focus:border-blue-400 bg-transparent placeholder-gray-500 text-gray-900 caret-black cursor-text" 
             placeholder="Agrega un comentario..." 
             value={textoMensaje} 
             onChange={(e) => setTextoMensaje(e.target.value)}

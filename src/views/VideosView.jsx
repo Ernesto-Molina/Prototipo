@@ -7,8 +7,8 @@ const VideoPost = ({ post, onEnviarCariño }) => {
     const { llamarAlAngel } = useAngel();
 
     return (
-        // Cada video ocupa toda la altura de la pantalla y se alinea al inicio del "snap"
-        <div className="relative w-full h-screen snap-start flex-shrink-0 bg-black flex items-center justify-center">
+        // Cada video ocupa toda la altura de su contenedor y se alinea al inicio del "snap"
+        <div className="relative w-full h-full snap-start flex-shrink-0 bg-black flex items-center justify-center">
             {/* Imagen de fondo del video */}
             <img src={post.image} className="w-full h-full object-cover" alt={post.desc} />
 
@@ -45,10 +45,10 @@ export default function VideosView({ postsVideos, enviarCariño }) {
       
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        containerRef.current.scrollBy({ top: window.innerHeight, behavior: 'smooth' });
+        containerRef.current.scrollBy({ top: containerRef.current.clientHeight, behavior: 'smooth' });
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        containerRef.current.scrollBy({ top: -window.innerHeight, behavior: 'smooth' });
+        containerRef.current.scrollBy({ top: -containerRef.current.clientHeight, behavior: 'smooth' });
       }
     };
 
@@ -57,8 +57,8 @@ export default function VideosView({ postsVideos, enviarCariño }) {
   }, []);
 
   return (
-    // Contenedor que ocupa toda la pantalla, permite scroll vertical y fuerza el "snap"
-    <div ref={containerRef} className="w-full h-screen overflow-y-auto snap-y snap-mandatory hide-scroll">
+    // Contenedor con altura ajustada (descontando cabecera y menú), permite scroll vertical y fuerza el "snap"
+    <div ref={containerRef} className="w-full overflow-y-auto snap-y snap-mandatory hide-scroll bg-black" style={{ height: 'calc(100vh - 140px)' }}>
       {postsVideos.map(post => (
         <VideoPost key={post.id} post={post} onEnviarCariño={enviarCariño} />
       ))}

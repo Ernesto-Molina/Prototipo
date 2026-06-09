@@ -75,7 +75,7 @@ export default function MensajesView({ chatActivo, setChatActivo, navegarA, chat
           <div className="p-3 border-t border-gray-200 sticky bottom-0 bg-white flex items-center gap-3">
              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm"><IconPlus /></div>
              <div className="flex-1 bg-gray-100 rounded-full px-4 py-3 flex items-center shadow-inner">
-               <input id="chat-message-input" name="chatMessageInput" aria-label="Escribir un mensaje privado" value={textoMensaje} onChange={e=>setTextoMensaje(e.target.value)} className="bg-transparent outline-none w-full text-base sm:text-lg" placeholder="Mensaje..." autoComplete="off" />
+               <input id="chat-message-input" name="chatMessageInput" aria-label="Escribir un mensaje privado" value={textoMensaje} onChange={e=>setTextoMensaje(e.target.value)} className="bg-transparent outline-none w-full text-base sm:text-lg text-gray-900 caret-black cursor-text" placeholder="Mensaje..." autoComplete="off" />
                {textoMensaje.trim() ? (
                  <button onClick={() => prepararEnvio(chatActivo.id, 'privado')} className="text-blue-600 font-bold text-lg ml-2">Enviar</button>
                ) : (

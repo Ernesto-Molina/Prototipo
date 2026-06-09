@@ -9,6 +9,7 @@ import InicioView from './views/InicioView';
 import VideosView from './views/VideosView';
 import MensajesView from './views/MensajesView';
 import { AngelContext } from './context/AngelContext.jsx';
+import { IconMic } from './components/Icons';
 
 export default function App() {
   const [seccionActual, setSeccionActual] = useState('inicio');
@@ -18,6 +19,11 @@ export default function App() {
   const [isThinking, setIsThinking] = useState(false);
   const [inputText, setInputText] = useState('');
   const [textoMensaje, setTextoMensaje] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const [textoEscuchado, setTextoEscuchado] = useState('');
+  const [textoInterino, setTextoInterino] = useState('');
+  const recognitionRef = useRef(null);
+  const transcriptRef = useRef('');
   
   const [activeStory, setActiveStory] = useState(null);
   const stories = initialStories;
@@ -48,7 +54,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
   }, [messages, isThinking]);
 
   // ==========================================
@@ -91,7 +97,7 @@ export default function App() {
 
   const navegarA = (seccion) => {
     setSeccionActual(seccion);
-    if (seccion === 'videos') llamarAlAngel("Ahora está en Reels, son videos cortos. Para ver el siguiente, solo deslice su dedo hacia arriba en la pantalla.");
+    if (seccion === 'videos') llamarAlAngel("Ahora está en la sección de videos cortos. Para ver el siguiente, solo deslice su dedo hacia arriba en la pantalla o use las flechas del teclado.");
     if (seccion === 'mensajes') {
       setChatActivo(null); // Al entrar a mensajes, siempre abrir la bandeja de entrada
       llamarAlAngel("Este es su buzón de mensajes. Toque el nombre de la persona con la que desea conversar.");
@@ -106,9 +112,100 @@ export default function App() {
     llamarAlAngel(`Ahora está en un chat privado con ${chat.user}. Solo ustedes dos pueden ver estos mensajes. Escriba abajo para responderle.`);
   };
 
-  const preguntarIA = async () => {
-    if (!inputText.trim()) return;
-    const duda = inputText;
+  const iniciarEscucha = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      llamarAlAngel("Lo siento, su navegador actual no soporta el reconocimiento de voz. Puede seguir usando el teclado.");
+      return;
+    }
+
+    // Cambiamos la pantalla INMEDIATAMENTE al tocar el botón
+    setIsListening(true);
+    setTextoEscuchado('Conectando micrófono...');
+
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+    recognition.lang = 'es-ES';
+    recognition.interimResults = true; // Permite ver el texto en tiempo real
+    recognition.continuous = true; // Mantiene el micrófono abierto aunque el usuario haga pausas
+
+    recognition.onstart = () => {
+      setTextoEscuchado(''); // Limpiamos la pantalla
+      setTextoInterino(''); // Limpiamos el texto fantasma
+      transcriptRef.current = ''; // Limpiamos la memoria de la frase
+      // Hacer vibrar el dispositivo físico (en teléfonos/tablets compatibles)
+      if (navigator.vibrate) {
+        navigator.vibrate(200); // Vibra durante 200 milisegundos
+      }
+      // Reproducir pitido corto (beep) de inicio
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, ctx.currentTime); // Tono agradable (800Hz)
+        gain.gain.setValueAtTime(0.1, ctx.currentTime); // Volumen suave (10%)
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.15); // Duración muy corta (0.15 segundos)
+      } catch(e) {}
+    };
+    recognition.onresult = (event) => {
+      let finalTranscript = '';
+      let interimTranscript = '';
+      for (let i = 0; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+      
+      transcriptRef.current = finalTranscript + interimTranscript; // Guardamos en memoria
+      setTextoEscuchado(finalTranscript); // Mostramos el texto sólido (seguro)
+      setTextoInterino(interimTranscript); // Mostramos el texto en vivo (fantasma)
+    };
+    recognition.onerror = (event) => {
+      setIsListening(false);
+      if (event.error === 'not-allowed') {
+        llamarAlAngel("El navegador bloqueó el micrófono. Por favor, busque un ícono de micrófono bloqueado en la barra de arriba (donde va la dirección web) y dele a 'Permitir'.");
+      }
+    };
+    recognition.onend = () => {
+      setIsListening(false);
+      // Reproducir pitido corto (beep) de fin
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, ctx.currentTime); // Tono más grave (400Hz) para indicar fin
+        gain.gain.setValueAtTime(0.1, ctx.currentTime); // Volumen suave (10%)
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.15);
+      } catch(e) {}
+      
+      // Enviar a la IA todo lo que se haya escuchado al finalizar
+      if (transcriptRef.current.trim()) {
+        preguntarIA(transcriptRef.current.trim());
+      }
+    };
+
+    try {
+      recognition.start();
+    } catch (e) {
+      // Evita errores si el usuario toca el botón dos veces muy rápido
+    }
+  };
+
+  const preguntarIA = async (textoVoz) => {
+    const duda = typeof textoVoz === 'string' ? textoVoz : inputText.trim();
+    if (!duda) return;
     setInputText('');
     setMessages(prev => [...prev, { role: 'user', text: duda }]);
     setIsThinking(true);
@@ -133,6 +230,47 @@ export default function App() {
         }
         .anim-corazon { animation: heartBurst 1.2s ease-out forwards; }
         .hide-scroll::-webkit-scrollbar { display: none; }
+        
+        @keyframes soundWave {
+          0%, 100% { height: 6px; }
+          50% { height: 20px; }
+        }
+        .wave-bar {
+          width: 4px;
+          background-color: currentColor;
+          border-radius: 2px;
+          animation: soundWave 1s ease-in-out infinite;
+        }
+        .wave-delay-1 { animation-delay: 0.0s; }
+        .wave-delay-2 { animation-delay: 0.2s; }
+        .wave-delay-3 { animation-delay: 0.4s; }
+        .wave-delay-4 { animation-delay: 0.6s; }
+        
+        @keyframes typingDot {
+          0%, 60%, 100% { transform: translateY(0); }
+          30% { transform: translateY(-5px); }
+        }
+        .dot-anim {
+          width: 8px;
+          height: 8px;
+          background-color: #2563eb;
+          border-radius: 50%;
+          animation: typingDot 1.4s infinite ease-in-out both;
+        }
+        .dot-delay-1 { animation-delay: -0.32s; }
+        .dot-delay-2 { animation-delay: -0.16s; }
+        
+        @keyframes vibrateEffect {
+          0%, 100% { transform: translateX(0); }
+          20%, 60% { transform: translateX(-2px) rotate(-2deg); }
+          40%, 80% { transform: translateX(2px) rotate(2deg); }
+        }
+        @keyframes glowPulse {
+          0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+          70% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .anim-record { animation: vibrateEffect 0.3s ease-in-out, glowPulse 1.5s infinite; }
       `}</style>
 
       {/* PANTALLA DE BIENVENIDA */}
@@ -194,7 +332,7 @@ export default function App() {
 
       </main>
 
-      {/* BARRA DE NAVEGACIÓN INFERIOR (Oculta en el Chat Privado para simular vista completa) */}
+      {/* BARRA DE NAVEGACIÓN INFERIOR (Oculta en Chat Privado para simular vista completa) */}
       {!(seccionActual === 'mensajes' && chatActivo) && (
         <BottomNav seccionActual={seccionActual} navegarA={navegarA} />
       )}
@@ -203,7 +341,7 @@ export default function App() {
       <button 
         onClick={() => llamarAlAngel("¡Aquí estoy! No tenga miedo, dígame en qué puedo ayudarle hoy.")} 
         className={`fixed right-4 sm:right-8 w-16 sm:w-20 h-16 sm:h-20 bg-blue-600 text-white rounded-full shadow-2xl border-4 border-white flex flex-col items-center justify-center animate-pulse z-50 transition-all hover:scale-110 ${
-          (seccionActual === 'mensajes' && chatActivo) ? 'bottom-24' : 'bottom-20 sm:bottom-24'
+          (seccionActual === 'mensajes' && chatActivo) ? 'bottom-4' : 'bottom-20 sm:bottom-24'
         }`}
       >
         <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
@@ -217,41 +355,109 @@ export default function App() {
               <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
               ANGELGUARD
             </span>
-            <div className="flex gap-4 items-center">
+            <div className="flex gap-3 sm:gap-4 items-center">
               <button onClick={() => { setIsMuted(!isMuted); hablarVoz(isMuted ? "Voz activada" : ""); }} className="text-2xl">{isMuted ? '🔇' : '🔊'}</button>
               <button onClick={() => { setIsChatVisible(false); resetClickCount(); }} className="bg-white text-blue-800 px-4 py-2 rounded-xl font-bold text-sm shadow-md active:bg-gray-200">OCULTAR</button>
             </div>
           </header>
           
+          {/* SI ESTÁ ESCUCHANDO: MOSTRAR INTERFAZ TIPO GOOGLE ASSISTANT */}
+          {isListening ? (
+            <div className="flex-1 flex flex-col items-center justify-center p-6 bg-white animate-in fade-in duration-300 z-10">
+              <span className="text-gray-500 font-bold text-xl sm:text-2xl mb-8">Escuchando...</span>
+              <p className="text-3xl sm:text-4xl font-black text-center min-h-[120px] leading-tight w-full max-w-sm">
+                {textoEscuchado || textoInterino ? (
+                  <>
+                    <span className="text-blue-900">{textoEscuchado}</span>
+                    <span className="text-blue-400 opacity-60 transition-all duration-75">{textoInterino}</span>
+                    <span className="animate-pulse text-blue-500 ml-1">|</span>
+                  </>
+                ) : (
+                  <span className="text-gray-400">Hable ahora... <span className="animate-pulse text-blue-500 ml-1">|</span></span>
+                )}
+              </p>
+              <button 
+                onClick={() => recognitionRef.current && recognitionRef.current.stop()}
+                className="w-28 h-28 mt-8 bg-red-500 text-white rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(239,68,68,0.5)] anim-record active:scale-95 transition-transform"
+              >
+                <div className="flex items-center justify-center gap-2.5 h-12">
+                  <div className="wave-bar wave-delay-1" style={{width: '6px'}}></div>
+                  <div className="wave-bar wave-delay-2" style={{width: '6px'}}></div>
+                  <div className="wave-bar wave-delay-3" style={{width: '6px'}}></div>
+                  <div className="wave-bar wave-delay-4" style={{width: '6px'}}></div>
+                </div>
+              </button>
+              <p className="mt-8 text-gray-500 font-medium text-lg text-center px-4">Hable a su ritmo.<br/>Toque el botón rojo cuando termine.</p>
+            </div>
+          ) : (
+          /* SI NO ESTÁ ESCUCHANDO: MOSTRAR EL CHAT NORMAL */
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-gray-50">
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`p-4 rounded-2xl max-w-[85%] text-base font-medium leading-snug border shadow-sm ${m.role === 'user' ? 'bg-blue-100 border-blue-200 text-blue-900 rounded-tr-none' : 'bg-white border-blue-600 text-gray-800 rounded-tl-none'}`}>{m.text}</div>
               </div>
             ))}
-            {isThinking && <div className="p-4 italic text-gray-400 animate-pulse text-base font-bold">AngelGuard está pensando...</div>}
+            {isThinking && (
+              <div className="flex justify-start">
+                <div className="p-4 rounded-2xl border shadow-sm bg-white border-blue-600 rounded-tl-none flex gap-1.5 items-center h-14">
+                  <div className="dot-anim dot-delay-1"></div>
+                  <div className="dot-anim dot-delay-2"></div>
+                  <div className="dot-anim"></div>
+                </div>
+              </div>
+            )}
             <div ref={chatEndRef} />
           </div>
+          )}
 
-          <footer className="p-4 bg-white border-t-2 border-gray-100 shrink-0">
+          {/* OCULTAR EL PIE DE PÁGINA MIENTRAS SE HABLA PARA DAR MÁS ESPACIO */}
+          {!isListening && (
+          <footer className="p-4 bg-white border-t-2 border-gray-100 shrink-0 animate-in slide-in-from-bottom duration-200">
             {mensajePendiente ? (
               <div className="flex flex-col gap-3">
                 <button onClick={() => {
                   if(mensajePendiente.tipo === 'privado' && chatActivo) {
-                    setChats(prev => prev.map(c => c.id === chatActivo.id ? {...c, mensajes: [...c.mensajes, { de: 'Usted', texto: mensajePendiente.text }]} : c));
+                    const nuevoMsj = { de: 'Usted', texto: mensajePendiente.text };
+                    setChats(prev => prev.map(c => c.id === chatActivo.id ? {...c, mensajes: [...c.mensajes, nuevoMsj]} : c));
+                    setChatActivo(prev => ({...prev, mensajes: [...prev.mensajes, nuevoMsj]}));
+                  } else if (mensajePendiente.tipo === 'feed') {
+                    const nuevoComentario = { de: 'Usted', texto: mensajePendiente.text };
+                    setPostsFeed(prev => prev.map(p => p.id === mensajePendiente.id ? {...p, comentarios: [...(p.comentarios || []), nuevoComentario]} : p));
                   }
                   setMensajePendiente(null); 
-                  llamarAlAngel("¡Excelente trabajo! Su mensaje ha sido enviado correctamente."); 
+                  setIsChatVisible(false); // Ocultamos el ángel al instante para que vean la pantalla
+                  hablarVoz("¡Excelente trabajo! Su mensaje ha sido publicado y ya puede verlo en la pantalla.");
+                  setMessages(prev => [...prev, { role: 'ai', text: "¡Excelente trabajo! Su mensaje ha sido publicado y ya puede verlo en la pantalla." }]);
                 }} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-base transition-all">SÍ, ESTOY SEGURO</button>
                 <button onClick={() => { setMensajePendiente(null); llamarAlAngel("Deshecho exitosamente. Lo hemos borrado por seguridad, nada se envió."); }} className="w-full border-2 border-red-500 text-red-600 font-bold py-3 rounded-xl text-base hover:bg-red-50 transition-all">NO, BORRAR Y VOLVER</button>
               </div>
             ) : (
               <div className="flex flex-col gap-3">
-                <input className="w-full p-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-blue-500" placeholder="Escriba su duda aquí..." value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => e.key === 'Enter' && preguntarIA()} />
-                <button onClick={preguntarIA} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl text-base hover:bg-blue-700 transition-all">PREGUNTAR AHORA</button>
+                <div className="flex gap-2">
+                  <input id="angel-chat-input" name="angelChatInput" aria-label="Escriba su duda para el asistente" className="w-full p-3 border-2 border-gray-200 rounded-xl text-base text-gray-900 caret-black cursor-text outline-none focus:border-blue-500" placeholder="Escriba su duda aquí..." value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => e.key === 'Enter' && preguntarIA()} autoComplete="off" />
+                  <button 
+                    onClick={iniciarEscucha} 
+                    aria-label="Hablar por micrófono"
+                    title="Hablar con AngelGuard"
+                    className={`w-14 flex-shrink-0 flex items-center justify-center transition-all ${isListening ? 'bg-red-500 text-white rounded-full anim-record' : 'bg-blue-100 text-blue-700 hover:bg-blue-200 border-2 border-blue-200 rounded-xl shadow-sm'}`}
+                  >
+                    {isListening ? (
+                      <div className="flex items-center justify-center gap-1 w-6 h-6">
+                        <div className="wave-bar wave-delay-1"></div>
+                        <div className="wave-bar wave-delay-2"></div>
+                        <div className="wave-bar wave-delay-3"></div>
+                        <div className="wave-bar wave-delay-4"></div>
+                      </div>
+                    ) : (
+                      <IconMic />
+                    )}
+                  </button>
+                </div>
+                <button onClick={() => preguntarIA()} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl text-base hover:bg-blue-700 transition-all">PREGUNTAR AHORA</button>
               </div>
             )}
           </footer>
+          )}
         </div>
       )}
     </div>
