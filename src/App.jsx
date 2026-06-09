@@ -156,10 +156,23 @@ export default function App() {
       let finalTranscript = '';
       let interimTranscript = '';
       for (let i = 0; i < event.results.length; ++i) {
+        let chunk = event.results[i][0].transcript;
+        let currentTotal = finalTranscript + interimTranscript;
+        
+        // Corrección del bug de duplicación en teléfonos móviles
+        // Si el celular envía toda la frase acumulada, cortamos lo viejo y dejamos solo lo nuevo
+        let currentTrimmed = currentTotal.trim().toLowerCase();
+        let chunkTrimmed = chunk.trim().toLowerCase();
+        
+        if (currentTrimmed.length > 0 && chunkTrimmed.startsWith(currentTrimmed) && chunkTrimmed.length > currentTrimmed.length) {
+          let matchIndex = chunk.toLowerCase().indexOf(currentTrimmed);
+          chunk = chunk.substring(matchIndex + currentTrimmed.length);
+        }
+        
         if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript;
+          finalTranscript += chunk;
         } else {
-          interimTranscript += event.results[i][0].transcript;
+          interimTranscript += chunk;
         }
       }
       
