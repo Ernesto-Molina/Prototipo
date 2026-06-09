@@ -157,12 +157,25 @@ export default function App() {
     recognition.onresult = (event) => {
       let finalTranscript = '';
       let interimTranscript = '';
-      for (let i = 0; i < event.results.length; ++i) {
-        let chunk = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalTranscript += chunk;
+      
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      if (isAndroid) {
+        // Corrección definitiva para móviles: Android ya envía la frase completa acumulada en el último resultado
+        let ultimoResultado = event.results[event.results.length - 1];
+        if (ultimoResultado.isFinal) {
+          finalTranscript = ultimoResultado[0].transcript;
         } else {
-          interimTranscript += chunk;
+          interimTranscript = ultimoResultado[0].transcript;
+        }
+      } else {
+        // En PC, los resultados se envían en pedazos, por lo que los sumamos con seguridad
+        for (let i = 0; i < event.results.length; ++i) {
+          let chunk = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += chunk;
+          } else {
+            interimTranscript += chunk;
+          }
         }
       }
       
@@ -365,22 +378,27 @@ export default function App() {
           
           {/* SI ESTÁ ESCUCHANDO: MOSTRAR INTERFAZ TIPO GOOGLE ASSISTANT */}
           {isListening ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-6 bg-white animate-in fade-in duration-300 z-10">
-              <span className="text-gray-500 font-bold text-xl sm:text-2xl mb-8">Escuchando...</span>
-              <p className="text-3xl sm:text-4xl font-black text-center min-h-[120px] leading-tight w-full max-w-sm">
-                {textoEscuchado || textoInterino ? (
-                  <>
-                    <span className="text-blue-900">{textoEscuchado}</span>
-                    <span className="text-blue-400 opacity-60 transition-all duration-75">{textoInterino}</span>
-                    <span className="animate-pulse text-blue-500 ml-1">|</span>
-                  </>
-                ) : (
-                  <span className="text-gray-400">Hable ahora... <span className="animate-pulse text-blue-500 ml-1">|</span></span>
-                )}
-              </p>
+            <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 bg-white animate-in fade-in duration-300 z-10 w-full overflow-hidden">
+              <span className="text-gray-500 font-bold text-xl sm:text-2xl mb-4 shrink-0">Escuchando...</span>
+              
+              {/* CAJA DE TEXTO CON SCROLL PARA EVITAR QUE EL BOTÓN DESAPAREZCA */}
+              <div className="w-full flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center mb-6 hide-scroll">
+                <p className="text-3xl sm:text-4xl font-black text-center leading-tight w-full max-w-sm">
+                  {textoEscuchado || textoInterino ? (
+                    <>
+                      <span className="text-blue-900">{textoEscuchado}</span>
+                      <span className="text-blue-400 opacity-60 transition-all duration-75">{textoInterino}</span>
+                      <span className="animate-pulse text-blue-500 ml-1">|</span>
+                    </>
+                  ) : (
+                    <span className="text-gray-400">Hable ahora... <span className="animate-pulse text-blue-500 ml-1">|</span></span>
+                  )}
+                </p>
+              </div>
+
               <button 
                 onClick={() => recognitionRef.current && recognitionRef.current.stop()}
-                className="w-28 h-28 mt-8 bg-red-500 text-white rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(239,68,68,0.5)] anim-record active:scale-95 transition-transform"
+                className="w-24 h-24 sm:w-28 sm:h-28 shrink-0 bg-red-500 text-white rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(239,68,68,0.5)] anim-record active:scale-95 transition-transform"
               >
                 <div className="flex items-center justify-center gap-2.5 h-12">
                   <div className="wave-bar wave-delay-1" style={{width: '6px'}}></div>
@@ -389,7 +407,7 @@ export default function App() {
                   <div className="wave-bar wave-delay-4" style={{width: '6px'}}></div>
                 </div>
               </button>
-              <p className="mt-8 text-gray-500 font-medium text-lg text-center px-4">Hable a su ritmo.<br/>Toque el botón rojo cuando termine.</p>
+              <p className="mt-6 text-gray-500 font-medium text-base sm:text-lg text-center px-4 shrink-0">Hable a su ritmo.<br/>Toque el botón rojo cuando termine.</p>
             </div>
           ) : (
           /* SI NO ESTÁ ESCUCHANDO: MOSTRAR EL CHAT NORMAL */
