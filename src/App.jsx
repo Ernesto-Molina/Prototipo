@@ -62,7 +62,7 @@ export default function App() {
   // ==========================================
   useEffect(() => {
     const interceptarRetroceso = (e) => {
-      if (e.key === 'Backspace' && document.activeElement.tagName.toLowerCase() !== 'input') {
+      if (e.key === 'Backspace' && !['input', 'textarea'].includes(document.activeElement.tagName.toLowerCase())) {
         e.preventDefault(); // Bloquea la navegación hacia atrás o borrado accidental del navegador
         llamarAlAngel("Ha presionado la tecla de borrar. Como medida de seguridad, hemos bloqueado esta acción para evitar que elimine información por accidente. Aquí nada se borra sin su permiso.");
       }
@@ -86,13 +86,14 @@ export default function App() {
     setPostsFeed(prev => prev.map(p => p.id === id ? { ...p, isSaved: !p.isSaved } : p));
   };
 
-  const prepararEnvio = (id, tipo) => {
-    setMensajePendiente({ id, text: textoMensaje, tipo });
+  const prepararEnvio = (id, tipo, textoOpcional = null) => {
+    const textoFinal = textoOpcional !== null ? textoOpcional : textoMensaje;
+    setMensajePendiente({ id, text: textoFinal, tipo });
     const duda = tipo === 'privado' 
       ? `Usted va a enviarle un mensaje a ${chatActivo?.user}. ¿Desea enviarlo ahora?`
-      : `Usted escribió: "${textoMensaje}". ¿Desea publicarlo en la foto?`;
+      : `Usted escribió: "${textoFinal}". ¿Desea publicarlo en la foto?`;
     llamarAlAngel(duda);
-    setTextoMensaje('');
+    if (!textoOpcional) setTextoMensaje('');
   };
 
   const navegarA = (seccion) => {
@@ -127,7 +128,8 @@ export default function App() {
     recognitionRef.current = recognition;
     recognition.lang = 'es-ES';
     recognition.interimResults = true; // Permite ver el texto en tiempo real
-    recognition.continuous = true; // Mantiene el micrófono abierto aunque el usuario haga pausas
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    recognition.continuous = !isAndroid; // En PC se mantiene abierto, en móvil usa el ciclo nativo para evitar duplicación
 
     recognition.onstart = () => {
       setTextoEscuchado(''); // Limpiamos la pantalla
@@ -157,18 +159,6 @@ export default function App() {
       let interimTranscript = '';
       for (let i = 0; i < event.results.length; ++i) {
         let chunk = event.results[i][0].transcript;
-        let currentTotal = finalTranscript + interimTranscript;
-        
-        // Corrección del bug de duplicación en teléfonos móviles
-        // Si el celular envía toda la frase acumulada, cortamos lo viejo y dejamos solo lo nuevo
-        let currentTrimmed = currentTotal.trim().toLowerCase();
-        let chunkTrimmed = chunk.trim().toLowerCase();
-        
-        if (currentTrimmed.length > 0 && chunkTrimmed.startsWith(currentTrimmed) && chunkTrimmed.length > currentTrimmed.length) {
-          let matchIndex = chunk.toLowerCase().indexOf(currentTrimmed);
-          chunk = chunk.substring(matchIndex + currentTrimmed.length);
-        }
-        
         if (event.results[i].isFinal) {
           finalTranscript += chunk;
         } else {
@@ -323,8 +313,7 @@ export default function App() {
         {seccionActual === 'inicio' && (
           <InicioView 
             stories={stories} activeStory={activeStory} setActiveStory={setActiveStory} 
-            postsFeed={postsFeed} toggleGuardar={toggleGuardar} 
-            enviarCariño={enviarCariño} textoMensaje={textoMensaje} setTextoMensaje={setTextoMensaje} 
+            postsFeed={postsFeed} toggleGuardar={toggleGuardar} enviarCariño={enviarCariño} 
             prepararEnvio={prepararEnvio} 
           />
         )}

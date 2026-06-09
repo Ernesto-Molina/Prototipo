@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { IconHeart, IconComment, IconPlane, IconBookmark } from './Icons';
 import { useAngel } from '../context/AngelContext.jsx';
 
-const FotoSocial = ({ post, onEnviarCariño, textoMensaje, setTextoMensaje, onEnviarMensaje, onGuardar }) => {
+const FotoSocial = ({ post, onEnviarCariño, onEnviarMensaje, onGuardar }) => {
   const { llamarAlAngel } = useAngel();
   const [animarCorazon, setAnimarCorazon] = useState(false);
+  const [comentarioLocal, setComentarioLocal] = useState('');
 
   const manejarDobleClic = (e) => {
     e.stopPropagation();
@@ -79,14 +80,14 @@ const FotoSocial = ({ post, onEnviarCariño, textoMensaje, setTextoMensaje, onEn
             aria-label="Escribir un comentario en la publicación"
             className="w-full text-base p-3 border-b-2 border-gray-200 outline-none focus:border-blue-400 bg-transparent placeholder-gray-500 text-gray-900 caret-black cursor-text" 
             placeholder="Agrega un comentario..." 
-            value={textoMensaje} 
-            onChange={(e) => setTextoMensaje(e.target.value)}
+            value={comentarioLocal} 
+            onChange={(e) => setComentarioLocal(e.target.value)}
             onClick={(e) => e.stopPropagation()}
           />
-          {textoMensaje.trim() && (
+          {comentarioLocal.trim() && (
             <button 
               className="font-bold py-2 rounded-lg text-white text-base shadow-sm transition-all bg-blue-500 hover:bg-blue-600"
-              onClick={(e) => { e.stopPropagation(); onEnviarMensaje(post.id, 'feed'); }}
+              onClick={(e) => { e.stopPropagation(); onEnviarMensaje(post.id, 'feed', comentarioLocal); setComentarioLocal(''); }}
             >
               Publicar
             </button>

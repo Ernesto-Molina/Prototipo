@@ -3,7 +3,7 @@ import FotoSocial from '../components/FotoSocial';
 import { IconClose } from '../components/Icons';
 import { useAngel } from '../context/AngelContext.jsx';
 
-export default function InicioView({ stories, activeStory, setActiveStory, postsFeed, toggleGuardar, enviarCariño, textoMensaje, setTextoMensaje, prepararEnvio }) {
+export default function InicioView({ stories, activeStory, setActiveStory, postsFeed, toggleGuardar, enviarCariño, prepararEnvio }) {
   const { llamarAlAngel } = useAngel();
   const currentIndex = activeStory ? stories.findIndex(s => s.id === activeStory.id) : -1;
 
@@ -82,7 +82,7 @@ export default function InicioView({ stories, activeStory, setActiveStory, posts
       {/* FEED DE FOTOS */}
       <div className="bg-gray-50 pt-2">
         {postsFeed.map(p => (
-          <FotoSocial key={p.id} post={p} onGuardar={toggleGuardar} onEnviarCariño={enviarCariño} textoMensaje={textoMensaje} setTextoMensaje={setTextoMensaje} onEnviarMensaje={prepararEnvio} />
+          <FotoSocial key={p.id} post={p} onGuardar={toggleGuardar} onEnviarCariño={enviarCariño} onEnviarMensaje={prepararEnvio} />
         ))}
       </div>
     </>
