@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { IconHeart, IconComment, IconPlane, IconBookmark } from './Icons';
 import { useAngel } from '../context/AngelContext.jsx';
 
-const FotoSocial = ({ post, onEnviarCariño, onEnviarMensaje, onGuardar }) => {
+const FotoSocial = ({ post, onEnviarCariño, onEnviarMensaje, onGuardar, onShare }) => {
   const { llamarAlAngel } = useAngel();
   const [animarCorazon, setAnimarCorazon] = useState(false);
   const [comentarioLocal, setComentarioLocal] = useState('');
@@ -50,7 +50,7 @@ const FotoSocial = ({ post, onEnviarCariño, onEnviarMensaje, onGuardar }) => {
             <button aria-label="Escribir comentario" onClick={(e) => { e.stopPropagation(); llamarAlAngel("Este dibujo de burbuja es para escribir un comentario público en la foto."); }}>
               <IconComment />
             </button>
-            <button aria-label="Compartir foto" onClick={(e) => { e.stopPropagation(); llamarAlAngel("Este avión de papel sirve para enviarle esta foto a otro amigo por mensaje privado."); }}>
+            <button aria-label="Compartir foto" onClick={(e) => { e.stopPropagation(); onShare(post, 'post'); }}>
               <IconPlane />
             </button>
           </div>

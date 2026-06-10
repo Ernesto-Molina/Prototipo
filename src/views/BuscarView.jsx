@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAngel } from '../context/AngelContext.jsx';
-import { IconSearch } from '../components/Icons';
+import { IconSearch, IconHeart } from '../components/Icons';
 
-export default function BuscarView() {
+export default function BuscarView({ preguntarIA }) {
   const { llamarAlAngel } = useAngel();
+  const [busqueda, setBusqueda] = useState('');
+  const [corazonesAnimados, setCorazonesAnimados] = useState({});
   
   // Generamos una cuadrícula de imágenes variadas (mascotas, paisajes, comida)
   const exploreImages = [
@@ -24,24 +26,51 @@ export default function BuscarView() {
     "https://images.unsplash.com/photo-1526336024174-e58f5cdd8e13?auto=format&fit=crop&w=300&q=80",
   ];
 
+  const manejarDobleClic = (index) => {
+    setCorazonesAnimados(prev => ({ ...prev, [index]: true }));
+    setTimeout(() => {
+      setCorazonesAnimados(prev => ({ ...prev, [index]: false }));
+    }, 1200);
+    llamarAlAngel("¡Le ha dado 'Me gusta' a esta foto! Dar doble toque rápido con el dedo es un atajo muy común en Instagram.");
+  };
+
   return (
     <div className="w-full bg-white min-h-[85vh] flex flex-col">
-      {/* Barra de Búsqueda Falsa */}
+      {/* Barra de Búsqueda Real */}
       <div className="p-3 sticky top-0 bg-white z-10 border-b border-gray-100">
-        <div 
-          className="w-full bg-gray-100 text-gray-500 p-2.5 rounded-xl flex items-center gap-3 cursor-pointer transition-colors active:bg-gray-200"
-          onClick={() => llamarAlAngel("Esta es la barra de búsqueda. En la aplicación real, si toca aquí y escribe una palabra como 'gatos' o 'recetas', le mostraría fotos sobre ese tema.")}
-        >
-          <IconSearch />
-          <span className="text-base font-medium">Buscar</span>
+        <div className="w-full bg-gray-100 text-gray-900 px-3 py-1 rounded-xl flex items-center gap-3 focus-within:ring-2 focus-within:ring-blue-500 transition-all">
+          <span className="text-gray-500"><IconSearch /></span>
+          <input 
+            type="text" 
+            className="w-full bg-transparent outline-none py-1.5 text-base font-medium placeholder-gray-500 caret-black" 
+            placeholder="Buscar..." 
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && busqueda.trim()) {
+                if (preguntarIA) {
+                  preguntarIA("Quiero buscar fotos de: " + busqueda.trim());
+                }
+                setBusqueda('');
+              }
+            }}
+            onClick={() => {
+              if (!busqueda) llamarAlAngel("Escriba lo que desea buscar y presione la tecla 'Enter' en su teclado.");
+            }}
+          />
         </div>
       </div>
 
       {/* Cuadrícula de Explorar */}
       <div className="grid grid-cols-3 gap-0.5 sm:gap-1 flex-1 bg-white pb-20">
         {exploreImages.map((img, index) => (
-          <div key={index} className="aspect-square bg-gray-200 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => llamarAlAngel("Esta es una foto pública de alguien que usted no conoce. Instagram se la muestra porque cree que le podría parecer interesante descubrir cosas nuevas.")}>
-            <img src={img} className="w-full h-full object-cover" alt="Explorar" />
+          <div key={index} className="relative aspect-square bg-gray-200 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => llamarAlAngel("Esta es una foto pública de alguien que usted no conoce. Puede hacerle doble clic para darle 'Me gusta'.")}>
+            <img src={img} className="w-full h-full object-cover select-none" alt="Explorar" onDoubleClick={() => manejarDobleClic(index)} />
+            {corazonesAnimados[index] && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                 <IconHeart filled={true} className="w-16 h-16 sm:w-20 sm:h-20 text-white/90 anim-corazon drop-shadow-2xl" />
+              </div>
+            )}
           </div>
         ))}
       </div>

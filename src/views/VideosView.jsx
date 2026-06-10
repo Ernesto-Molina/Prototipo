@@ -3,7 +3,7 @@ import { IconHeart, IconComment, IconPlane, IconPlus } from '../components/Icons
 import { useAngel } from '../context/AngelContext.jsx';
 
 // --- Componente para un solo video (Reel) ---
-const VideoPost = ({ post, onEnviarCariño }) => {
+const VideoPost = ({ post, onEnviarCariño, onShare }) => {
     const { llamarAlAngel } = useAngel();
 
     return (
@@ -27,7 +27,7 @@ const VideoPost = ({ post, onEnviarCariño }) => {
                 <button onClick={() => llamarAlAngel("Este botón con una burbuja es para escribir un comentario en el video.")} className="flex flex-col items-center gap-1">
                     <IconComment className="w-9 h-9 drop-shadow-lg" />
                 </button>
-                <button onClick={() => llamarAlAngel("Este avión de papel sirve para compartir este video con un amigo.")} className="flex flex-col items-center gap-1">
+                <button onClick={() => onShare(post, 'reel')} className="flex flex-col items-center gap-1">
                     <IconPlane className="w-9 h-9 drop-shadow-lg" />
                 </button>
             </div>
@@ -36,7 +36,7 @@ const VideoPost = ({ post, onEnviarCariño }) => {
 };
 
 // --- Contenedor principal de la vista de Videos/Reels ---
-export default function VideosView({ postsVideos, enviarCariño, onSubirFotoClick }) {
+export default function VideosView({ postsVideos, enviarCariño, onSubirFotoClick, onShare }) {
   const containerRef = useRef(null);
 
   useEffect(() => {
@@ -68,7 +68,7 @@ export default function VideosView({ postsVideos, enviarCariño, onSubirFotoClic
       {/* Contenedor con altura ajustada (descontando padding inferior del main), permite scroll vertical y fuerza el "snap" */}
       <div ref={containerRef} className="w-full overflow-y-auto snap-y snap-mandatory hide-scroll bg-black" style={{ height: 'calc(100vh - 80px)' }}>
         {postsVideos.map(post => (
-          <VideoPost key={post.id} post={post} onEnviarCariño={enviarCariño} />
+          <VideoPost key={post.id} post={post} onEnviarCariño={enviarCariño} onShare={onShare} />
         ))}
       </div>
     </div>

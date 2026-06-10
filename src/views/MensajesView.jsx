@@ -8,6 +8,7 @@ export default function MensajesView({ chatActivo, setChatActivo, navegarA, chat
   const fileInputRef = useRef(null);
   const [isDictating, setIsDictating] = useState(false);
   const dictationRef = useRef(null);
+  const [msgOptions, setMsgOptions] = useState(null);
 
   useEffect(() => {
     if (chatActivo) {
@@ -68,6 +69,13 @@ export default function MensajesView({ chatActivo, setChatActivo, navegarA, chat
     try { recognition.start(); } catch (e) {}
   };
 
+  const anularEnvio = (index) => {
+    setChats(prev => prev.map(c => c.id === chatActivo.id ? { ...c, mensajes: c.mensajes.filter((_, i) => i !== index) } : c));
+    setChatActivo(prev => ({ ...prev, mensajes: prev.mensajes.filter((_, i) => i !== index) }));
+    setMsgOptions(null);
+    llamarAlAngel("Envío anulado con éxito. El mensaje ha sido borrado de la conversación y la otra persona ya no podrá verlo.");
+  };
+
   return (
     <div className="w-full flex flex-col min-h-[85vh] bg-white">
       {/* VISTA 1: BANDEJA DE ENTRADA */}
@@ -124,9 +132,34 @@ export default function MensajesView({ chatActivo, setChatActivo, navegarA, chat
                 <span className="text-gray-500 text-sm">Instagram</span>
              </div>
              {chatActivo.mensajes.map((m, i) => (
-               <div key={i} className={`max-w-[75%] p-3 rounded-2xl text-base sm:text-lg overflow-hidden ${m.de === 'Usted' ? 'bg-blue-500 text-white self-end rounded-br-none' : 'bg-gray-100 text-black self-start rounded-bl-none'}`}>
-                 {m.texto && <p>{m.texto}</p>}
-                 {m.imagen && <img src={m.imagen} alt="Foto enviada" className={`w-full max-w-[220px] h-auto rounded-lg object-cover shadow-sm ${m.texto ? 'mt-2' : ''}`} />}
+               <div key={i} className={`flex flex-col ${m.de === 'Usted' ? 'items-end' : 'items-start'} mb-4 relative`}>
+                 
+                 {/* Opciones de Anular envío para mensajes del usuario */}
+                 {m.de === 'Usted' && (m.sharedItem || m.imagen) && (
+                   <button onClick={() => setMsgOptions(i)} className="mb-1 text-gray-400 hover:text-gray-700 px-2 flex gap-1 cursor-pointer">
+                     <span className="w-1.5 h-1.5 bg-current rounded-full"></span>
+                     <span className="w-1.5 h-1.5 bg-current rounded-full"></span>
+                     <span className="w-1.5 h-1.5 bg-current rounded-full"></span>
+                   </button>
+                 )}
+
+                 <div className={`max-w-[75%] p-3 rounded-2xl text-base sm:text-lg overflow-hidden ${m.de === 'Usted' ? 'bg-blue-500 text-white rounded-br-none' : 'bg-gray-100 text-black rounded-bl-none'}`}>
+                   {m.texto && <p>{m.texto}</p>}
+                   {m.imagen && <img src={m.imagen} alt="Foto enviada" className={`w-full max-w-[220px] h-auto rounded-lg object-cover shadow-sm ${m.texto ? 'mt-2' : ''}`} />}
+                   {m.sharedItem && (
+                     <div className="mt-2 bg-white/20 rounded-xl p-2 cursor-pointer active:scale-95 transition-transform" onClick={() => llamarAlAngel("Esta es la publicación que usted compartió.")}>
+                       <img src={m.sharedItem.image} className="w-full max-w-[220px] h-auto aspect-square object-cover rounded-lg shadow-sm" alt="Publicación compartida" />
+                       <p className="text-sm font-semibold mt-2 truncate">@{m.sharedItem.user}</p>
+                     </div>
+                   )}
+                 </div>
+
+                 {msgOptions === i && (
+                   <div className="absolute top-8 right-0 bg-white shadow-xl border border-gray-200 rounded-xl p-2 z-30 w-40 animate-in fade-in zoom-in-95">
+                     <button onClick={() => anularEnvio(i)} className="w-full text-left px-3 py-2 text-red-600 font-bold hover:bg-red-50 rounded-lg transition-colors">Anular envío</button>
+                     <button onClick={() => setMsgOptions(null)} className="w-full text-left px-3 py-2 text-gray-700 font-bold hover:bg-gray-50 rounded-lg mt-1 transition-colors">Cancelar</button>
+                   </div>
+                 )}
                </div>
              ))}
              <div ref={chatEndRef} />

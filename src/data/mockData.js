@@ -14,7 +14,7 @@ export const initialPostsFeed = [
     id: 1, 
     user: 'Su Familia', 
     avatar: 'https://i.pravatar.cc/150?u=familia', 
-    image: '/1000047523.jpg', 
+    image: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=800', 
     likes: 15, 
     hasLiked: false,
     isSaved: false, 

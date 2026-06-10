@@ -28,6 +28,9 @@ export default function App() {
   const transcriptRef = useRef('');
   const fileInputRef = useRef(null);
   
+  const touchStartRef = useRef({ x: null, y: null });
+  const touchEndRef = useRef({ x: null, y: null });
+
   const [activeStory, setActiveStory] = useState(null);
   const [stories, setStories] = useState(initialStories);
 
@@ -45,6 +48,24 @@ export default function App() {
 
   const [mensajePendiente, setMensajePendiente] = useState(null);
   const chatEndRef = useRef(null);
+
+  const [itemToShare, setItemToShare] = useState(null);
+
+  const handleShareClick = (item, type) => {
+    setItemToShare({ ...item, type });
+    llamarAlAngel("Seleccione a quién desea enviarle esta publicación de la lista de sus contactos.");
+  };
+
+  const sendShare = (chatId) => {
+    const chat = chats.find(c => c.id === chatId);
+    const nuevoMsj = { de: 'Usted', texto: `Mira este ${itemToShare.type === 'reel' ? 'video' : 'post'} que encontré.`, sharedItem: itemToShare };
+    setChats(prev => prev.map(c => c.id === chatId ? {...c, mensajes: [...c.mensajes, nuevoMsj]} : c));
+    if (chatActivo && chatActivo.id === chatId) {
+      setChatActivo(prev => ({...prev, mensajes: [...prev.mensajes, nuevoMsj]}));
+    }
+    setItemToShare(null);
+    llamarAlAngel(`¡Compartido exitosamente con ${chat.user}! Puede revisar la conversación en sus mensajes.`);
+  };
 
   const hablarVoz = (texto) => {
     reproducirVoz(texto, isMuted);
@@ -249,10 +270,45 @@ export default function App() {
     }
   };
 
+  // ==========================================
+  // GESTOS DE DESLIZAMIENTO (SWIPE PARA CAMBIAR PESTAÑAS)
+  // ==========================================
+  const onTouchStart = (e) => {
+    touchEndRef.current = { x: null, y: null };
+    touchStartRef.current = { x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY };
+  };
+  const onTouchMove = (e) => {
+    touchEndRef.current = { x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY };
+  };
+  const onTouchEnd = (e) => {
+    if (!touchStartRef.current.x || !touchEndRef.current.x) return;
+    
+    // Prevenir cambio de pestaña si hay modales, un chat abierto o scroll horizontal
+    if (isChatVisible || mostrarBienvenida || activeStory || chatActivo) return;
+    if (e.target.closest('.overflow-x-auto') || e.target.closest('.fixed.inset-0')) return;
+
+    const distanceX = touchStartRef.current.x - touchEndRef.current.x;
+    const distanceY = touchStartRef.current.y - touchEndRef.current.y;
+    
+    // Verificar si fue un deslizamiento mayormente horizontal y largo (> 50px)
+    if (Math.abs(distanceX) > Math.abs(distanceY) && Math.abs(distanceX) > 50) {
+      const isLeftSwipe = distanceX > 0;
+      const tabs = ['inicio', 'videos', 'mensajes', 'buscar', 'perfil'];
+      const currentIndex = tabs.indexOf(seccionActual);
+
+      if (isLeftSwipe && currentIndex < tabs.length - 1) {
+        navegarA(tabs[currentIndex + 1]);
+      } else if (!isLeftSwipe && currentIndex > 0) {
+        navegarA(tabs[currentIndex - 1]);
+      }
+    }
+  };
+
   const preguntarIA = async (textoVoz) => {
     const duda = typeof textoVoz === 'string' ? textoVoz : inputText.trim();
     if (!duda) return;
     setInputText('');
+    setIsChatVisible(true); // Asegura que el chat se abra para mostrar la respuesta
     setMessages(prev => [...prev, { role: 'user', text: duda }]);
     setIsThinking(true);
     try {
@@ -265,7 +321,12 @@ export default function App() {
 
   return (
     <AngelContext.Provider value={{ llamarAlAngel }}>
-    <div className="min-h-screen bg-white sm:bg-gray-50 flex flex-col items-center font-sans select-none relative">
+    <div 
+      className="min-h-screen bg-white sm:bg-gray-50 flex flex-col items-center font-sans select-none relative"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
       
       <style>{`
         @keyframes heartBurst {
@@ -357,13 +418,13 @@ export default function App() {
           <InicioView 
             stories={stories} activeStory={activeStory} setActiveStory={setActiveStory} 
             postsFeed={postsFeed} toggleGuardar={toggleGuardar} enviarCariño={enviarCariño} 
-            prepararEnvio={prepararEnvio} 
+            prepararEnvio={prepararEnvio} onShare={handleShareClick}
           />
         )}
 
         {seccionActual === 'videos' && (
           <VideosView 
-            postsVideos={postsVideos} enviarCariño={enviarCariño} onSubirFotoClick={triggerSubirFoto}
+            postsVideos={postsVideos} enviarCariño={enviarCariño} onSubirFotoClick={triggerSubirFoto} onShare={handleShareClick}
           />
         )}
 
@@ -384,7 +445,7 @@ export default function App() {
         )}
 
         {seccionActual === 'buscar' && (
-          <BuscarView />
+          <BuscarView preguntarIA={preguntarIA} />
         )}
 
       </main>
@@ -395,6 +456,27 @@ export default function App() {
           <BottomNav seccionActual={seccionActual} navegarA={navegarA} chats={chats} />
           <input type="file" accept="image/*" ref={fileInputRef} onChange={manejarSubidaFoto} className="hidden" aria-hidden="true" />
         </>
+      )}
+
+      {/* MODAL PARA COMPARTIR */}
+      {itemToShare && (
+        <div className="fixed inset-0 bg-black/60 z-[200] flex items-end justify-center sm:items-center sm:p-4 animate-in fade-in">
+          <div className="bg-white w-full max-w-sm rounded-t-3xl sm:rounded-2xl overflow-hidden shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 flex flex-col max-h-[80vh]">
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 shrink-0">
+              <span className="font-bold text-lg text-gray-900">Compartir con...</span>
+              <button onClick={() => { setItemToShare(null); llamarAlAngel("Ha cancelado el envío."); }} className="text-gray-500 hover:text-gray-900 font-bold text-xl px-2">✕</button>
+            </div>
+            <div className="overflow-y-auto p-2 flex-1">
+              {chats.map(c => (
+                <div key={c.id} className="flex items-center gap-4 p-3 hover:bg-gray-100 rounded-xl cursor-pointer transition-colors" onClick={() => sendShare(c.id)}>
+                  <img src={c.avatar} className="w-12 h-12 rounded-full object-cover border border-gray-200" alt={c.user} />
+                  <span className="font-semibold text-gray-900 flex-1 truncate">{c.user}</span>
+                  <button className="bg-blue-600 active:bg-blue-700 text-white text-sm font-bold py-2 px-5 rounded-lg shadow-sm">Enviar</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* BOTÓN DE AYUDA (EL SALVAVIDAS SIEMPRE VISIBLE) */}
