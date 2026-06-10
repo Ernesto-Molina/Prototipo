@@ -8,6 +8,8 @@ import { reproducirVoz } from './utils/speech';
 import InicioView from './views/InicioView';
 import VideosView from './views/VideosView';
 import MensajesView from './views/MensajesView';
+import BuscarView from './views/BuscarView';
+import PerfilView from './views/PerfilView';
 import { AngelContext } from './context/AngelContext.jsx';
 import { IconMic } from './components/Icons';
 
@@ -24,9 +26,10 @@ export default function App() {
   const [textoInterino, setTextoInterino] = useState('');
   const recognitionRef = useRef(null);
   const transcriptRef = useRef('');
+  const fileInputRef = useRef(null);
   
   const [activeStory, setActiveStory] = useState(null);
-  const stories = initialStories;
+  const [stories, setStories] = useState(initialStories);
 
   const [messages, setMessages] = useState(initialMessages);
 
@@ -52,6 +55,12 @@ export default function App() {
     setMessages(prev => [...prev, { role: 'ai', text: texto }]);
     hablarVoz(texto);
   };
+
+  useEffect(() => {
+    if (activeStory) {
+      setStories(prev => prev.map(s => s.id === activeStory.id ? { ...s, isViewed: true } : s));
+    }
+  }, [activeStory]);
 
   useEffect(() => {
     setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
@@ -104,6 +113,8 @@ export default function App() {
       llamarAlAngel("Este es su buzón de mensajes. Toque el nombre de la persona con la que desea conversar.");
     }
     if (seccion === 'inicio') llamarAlAngel("Ha vuelto al inicio. Aquí verá las fotos nuevas de las personas que usted sigue.");
+    if (seccion === 'perfil') llamarAlAngel("Este es su perfil personal. Aquí viven todas las fotos que usted ha publicado, como si fuera su álbum de recuerdos.");
+    if (seccion === 'buscar') llamarAlAngel("Ha entrado a la sección de Explorar. Aquí puede descubrir fotos de personas de todo el mundo que comparten sus mismos gustos.");
   };
 
   const abrirChat = (chat) => {
@@ -111,6 +122,25 @@ export default function App() {
     // Marcar como leído
     setChats(prev => prev.map(c => c.id === chat.id ? { ...c, unread: false } : c));
     llamarAlAngel(`Ahora está en un chat privado con ${chat.user}. Solo ustedes dos pueden ver estos mensajes. Escriba abajo para responderle.`);
+  };
+
+  const triggerSubirFoto = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const manejarSubidaFoto = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const imageUrl = URL.createObjectURL(file);
+      const nuevoPost = { id: Date.now(), user: 'Usted', avatar: 'https://i.pravatar.cc/150?u=yo', image: imageUrl, likes: 0, hasLiked: false, isSaved: false, caption: ' ¡Miren mi nueva foto!', comentarios: [] };
+      setPostsFeed(prev => [nuevoPost, ...prev]);
+      setSeccionActual('inicio');
+      llamarAlAngel("¡Felicidades! Su foto se ha publicado correctamente y sus familiares ya pueden verla en el inicio.");
+      // Limpiamos el input para permitir subir la misma foto otra vez si quiere
+      e.target.value = '';
+    }
   };
 
   const iniciarEscucha = () => {
@@ -315,9 +345,9 @@ export default function App() {
         </div>
       )}
 
-      {/* CABECERA PRINCIPAL (Oculta si estamos dentro de un chat privado) */}
-      {!(seccionActual === 'mensajes' && chatActivo) && (
-        <Header navegarA={navegarA} chats={chats} />
+      {/* CABECERA PRINCIPAL (Solo se muestra en el Inicio) */}
+      {seccionActual === 'inicio' && (
+        <Header navegarA={navegarA} chats={chats} onSubirFotoClick={triggerSubirFoto} />
       )}
 
       {/* CONTENIDO PRINCIPAL */}
@@ -333,23 +363,38 @@ export default function App() {
 
         {seccionActual === 'videos' && (
           <VideosView 
-            postsVideos={postsVideos} enviarCariño={enviarCariño} 
+            postsVideos={postsVideos} enviarCariño={enviarCariño} onSubirFotoClick={triggerSubirFoto}
           />
         )}
 
         {seccionActual === 'mensajes' && (
           <MensajesView 
             chatActivo={chatActivo} setChatActivo={setChatActivo} navegarA={navegarA} 
-            chats={chats} abrirChat={abrirChat} 
+            chats={chats} setChats={setChats} abrirChat={abrirChat} 
             textoMensaje={textoMensaje} setTextoMensaje={setTextoMensaje} prepararEnvio={prepararEnvio} 
           />
+        )}
+
+        {seccionActual === 'perfil' && (
+          <PerfilView 
+            misPosts={postsFeed.filter(p => p.user === 'Usted')} 
+            guardados={postsFeed.filter(p => p.isSaved)}
+            onSubirFotoClick={triggerSubirFoto}
+          />
+        )}
+
+        {seccionActual === 'buscar' && (
+          <BuscarView />
         )}
 
       </main>
 
       {/* BARRA DE NAVEGACIÓN INFERIOR (Oculta en Chat Privado para simular vista completa) */}
       {!(seccionActual === 'mensajes' && chatActivo) && (
-        <BottomNav seccionActual={seccionActual} navegarA={navegarA} />
+        <>
+          <BottomNav seccionActual={seccionActual} navegarA={navegarA} chats={chats} />
+          <input type="file" accept="image/*" ref={fileInputRef} onChange={manejarSubidaFoto} className="hidden" aria-hidden="true" />
+        </>
       )}
 
       {/* BOTÓN DE AYUDA (EL SALVAVIDAS SIEMPRE VISIBLE) */}

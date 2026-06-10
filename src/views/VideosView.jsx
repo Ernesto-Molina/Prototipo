@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { IconHeart, IconComment, IconPlane } from '../components/Icons';
+import { IconHeart, IconComment, IconPlane, IconPlus } from '../components/Icons';
 import { useAngel } from '../context/AngelContext.jsx';
 
 // --- Componente para un solo video (Reel) ---
@@ -36,7 +36,7 @@ const VideoPost = ({ post, onEnviarCariño }) => {
 };
 
 // --- Contenedor principal de la vista de Videos/Reels ---
-export default function VideosView({ postsVideos, enviarCariño }) {
+export default function VideosView({ postsVideos, enviarCariño, onSubirFotoClick }) {
   const containerRef = useRef(null);
 
   useEffect(() => {
@@ -57,11 +57,20 @@ export default function VideosView({ postsVideos, enviarCariño }) {
   }, []);
 
   return (
-    // Contenedor con altura ajustada (descontando cabecera y menú), permite scroll vertical y fuerza el "snap"
-    <div ref={containerRef} className="w-full overflow-y-auto snap-y snap-mandatory hide-scroll bg-black" style={{ height: 'calc(100vh - 140px)' }}>
-      {postsVideos.map(post => (
-        <VideoPost key={post.id} post={post} onEnviarCariño={enviarCariño} />
-      ))}
+    <div className="relative w-full h-full">
+      {/* CABECERA FLOTANTE DE REELS */}
+      <div className="absolute top-0 left-0 w-full p-4 z-20 pointer-events-none flex justify-start">
+        <button onClick={onSubirFotoClick} className="text-white pointer-events-auto active:scale-95 transition-transform drop-shadow-lg" aria-label="Subir reel">
+          <IconPlus />
+        </button>
+      </div>
+
+      {/* Contenedor con altura ajustada (descontando padding inferior del main), permite scroll vertical y fuerza el "snap" */}
+      <div ref={containerRef} className="w-full overflow-y-auto snap-y snap-mandatory hide-scroll bg-black" style={{ height: 'calc(100vh - 80px)' }}>
+        {postsVideos.map(post => (
+          <VideoPost key={post.id} post={post} onEnviarCariño={enviarCariño} />
+        ))}
+      </div>
     </div>
   );
 }

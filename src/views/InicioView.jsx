@@ -71,7 +71,7 @@ export default function InicioView({ stories, activeStory, setActiveStory, posts
       <div className="flex gap-4 p-4 border-b border-gray-200 overflow-x-auto hide-scroll">
         {stories.map(s => (
           <div key={s.id} className="flex flex-col items-center gap-1 cursor-pointer min-w-[72px]" onClick={(e) => { e.stopPropagation(); setActiveStory(s); llamarAlAngel("Las historias en la aplicación real desaparecen en 15 segundos, lo que da mucho susto. Pero aquí, esta historia se quedará abierta todo el tiempo que necesite. Presione la X arriba a la derecha cuando quiera cerrarla."); }}>
-            <div className={`w-[70px] h-[70px] rounded-full p-[3px] ${s.isMine ? 'border-2 border-gray-300' : 'bg-gradient-to-tr from-yellow-400 via-red-500 to-fuchsia-600'}`}>
+            <div className={`w-[70px] h-[70px] rounded-full p-[3px] ${s.isMine ? 'border-2 border-gray-300' : (s.isViewed ? 'bg-gray-300' : 'bg-gradient-to-tr from-yellow-400 via-red-500 to-fuchsia-600')}`}>
               <img src={s.avatar} className="w-full h-full rounded-full border-2 border-white object-cover bg-white" alt={s.user} />
             </div>
             <span className="text-xs text-gray-800 truncate w-full text-center">{s.user}</span>
