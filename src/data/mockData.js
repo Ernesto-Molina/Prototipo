@@ -52,3 +52,9 @@ export const initialChats = [
     ]
   }
 ];
+
+export const initialNotes = [
+  { id: 1, user: 'Andrés', avatar: 'https://i.pravatar.cc/150?u=andres', text: '¡Buen día a todos!' },
+  { id: 2, user: 'María Rosa', avatar: 'https://i.pravatar.cc/150?u=maria', text: 'Buscando recetas...' },
+  { id: 3, user: 'Carmen', avatar: 'https://i.pravatar.cc/150?u=carmen', text: 'Tarde de tejido 🧶' }
+];

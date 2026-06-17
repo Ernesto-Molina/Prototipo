@@ -1,14 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { IconBack, IconPlus, IconPhone, IconVideo, IconMic, IconPencil } from '../components/Icons';
+import { IconBack, IconPlus, IconPhone, IconVideo, IconMic, IconPencil, IconSearch } from '../components/Icons';
 import { useAngel } from '../context/AngelContext.jsx';
 
-export default function MensajesView({ chatActivo, setChatActivo, navegarA, chats, setChats, abrirChat, textoMensaje, setTextoMensaje, prepararEnvio }) {
+export default function MensajesView({ chatActivo, setChatActivo, navegarA, chats, setChats, abrirChat, textoMensaje, setTextoMensaje, prepararEnvio, notes, setNotes, miAvatar }) {
   const { llamarAlAngel } = useAngel();
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const [isDictating, setIsDictating] = useState(false);
   const dictationRef = useRef(null);
   const [msgOptions, setMsgOptions] = useState(null);
+  const [isAddingNote, setIsAddingNote] = useState(false);
+  const [noteText, setNoteText] = useState('');
+  const [busqueda, setBusqueda] = useState('');
+
+  const miNota = notes.find(n => n.user === 'Usted');
+  
+  const chatsFiltrados = chats.filter(c => c.user.toLowerCase().includes(busqueda.toLowerCase()));
 
   useEffect(() => {
     if (chatActivo) {
@@ -93,13 +100,70 @@ export default function MensajesView({ chatActivo, setChatActivo, navegarA, chat
             </div>
           </div>
           
+          {/* BARRA DE BÚSQUEDA DE CHATS */}
+          <div className="px-4 py-2 mt-2">
+            <div className="w-full bg-gray-100 text-gray-900 px-3 py-1.5 rounded-xl flex items-center gap-3 focus-within:ring-2 focus-within:ring-blue-500 transition-all">
+              <span className="text-gray-500 scale-90"><IconSearch /></span>
+              <input 
+                type="text" 
+                className="w-full bg-transparent outline-none py-1 text-base font-medium placeholder-gray-500 caret-black" 
+                placeholder="Buscar..." 
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                onClick={() => {
+                  if (!busqueda) llamarAlAngel("Escriba aquí el nombre de la persona con la que desea hablar para encontrarla rápidamente.");
+                }}
+              />
+            </div>
+          </div>
+
+          {/* BANDEJA DE NOTAS */}
+          <div className="px-4 py-4 flex gap-4 overflow-x-auto hide-scroll border-b border-gray-100">
+            {/* Mi Nota */}
+            <div 
+              className="flex flex-col items-center cursor-pointer min-w-[72px]" 
+              onClick={() => {
+                setNoteText(miNota ? miNota.text : '');
+                setIsAddingNote(true);
+                llamarAlAngel(miNota ? "Puede borrar el texto y escribir una nota nueva." : "Escriba lo que está pensando. Sus amigos podrán ver este mensaje durante 24 horas.");
+              }}
+            >
+              <div className="relative mb-2">
+                <img src={miAvatar} className="w-[72px] h-[72px] rounded-full object-cover shadow-sm" alt="Mi Nota" />
+                {miNota ? (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-white rounded-2xl shadow-md border border-gray-200 px-3 py-1.5 text-xs text-gray-700 whitespace-nowrap max-w-[85px] overflow-hidden text-ellipsis z-10">
+                    {miNota.text}
+                  </div>
+                ) : (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white rounded-2xl shadow-md border border-gray-200 px-3 py-1 flex items-center justify-center z-10">
+                    <span className="text-xl leading-none text-gray-500 font-light">+</span>
+                  </div>
+                )}
+              </div>
+              <span className={`text-xs font-medium truncate w-[72px] text-center ${miNota ? 'text-gray-800' : 'text-gray-500'}`}>Tu nota</span>
+            </div>
+
+            {/* Notas de amigos */}
+            {notes.filter(n => n.user !== 'Usted').map(nota => (
+              <div key={nota.id} className="flex flex-col items-center cursor-pointer min-w-[72px]" onClick={() => llamarAlAngel(`Esta es una nota de ${nota.user}. Dice: "${nota.text}". Desaparecerá mañana.`)}>
+                <div className="relative mb-2">
+                  <img src={nota.avatar} className="w-[72px] h-[72px] rounded-full object-cover shadow-sm" alt={nota.user} />
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-white rounded-2xl shadow-md border border-gray-200 px-3 py-1.5 text-xs text-gray-700 whitespace-nowrap max-w-[85px] overflow-hidden text-ellipsis z-10">
+                    {nota.text}
+                  </div>
+                </div>
+                <span className="text-xs text-gray-800 font-medium truncate w-[72px] text-center">{nota.user}</span>
+              </div>
+            ))}
+          </div>
+
           <div className="p-4 flex items-center justify-between">
              <span className="font-semibold text-lg">Mensajes</span>
              <span className="text-blue-500 font-semibold text-base cursor-pointer">Solicitudes</span>
           </div>
 
           <div className="flex flex-col">
-            {chats.map(c => (
+            {chatsFiltrados.length > 0 ? chatsFiltrados.map(c => (
               <div key={c.id} onClick={() => abrirChat(c)} className="chat-row flex items-center gap-4 p-4 hover:bg-gray-50 active:bg-gray-100 cursor-pointer">
                 <img src={c.avatar} className="w-16 h-16 rounded-full object-cover border border-gray-200" alt={c.user} />
                 <div className="flex-1 overflow-hidden">
@@ -110,7 +174,11 @@ export default function MensajesView({ chatActivo, setChatActivo, navegarA, chat
                 </div>
                 {c.unread && <div className="w-3 h-3 bg-blue-500 rounded-full shrink-0"></div>}
               </div>
-            ))}
+            )) : (
+              <div className="p-8 text-center text-gray-500 font-medium text-base">
+                No se encontraron conversaciones con "{busqueda}".
+              </div>
+            )}
           </div>
         </>
       ) : (
@@ -180,6 +248,59 @@ export default function MensajesView({ chatActivo, setChatActivo, navegarA, chat
                  <button onClick={toggleDictado} className="text-gray-500 ml-2 hover:text-blue-500 transition-colors"><IconMic /></button>
                )}
              </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PARA AGREGAR NOTA */}
+      {isAddingNote && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95">
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+              <span className="font-bold text-lg text-gray-900">Tu nota</span>
+              <button onClick={() => setIsAddingNote(false)} className="text-gray-500 hover:text-gray-900 font-bold text-xl px-2">✕</button>
+            </div>
+            
+            <div className="p-5 flex flex-col items-center gap-4">
+              <div className="relative w-24 h-24 mb-4">
+                <img src={miAvatar} alt="Mi Perfil" className="w-full h-full rounded-full object-cover shadow-sm border border-gray-200" />
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-white rounded-2xl shadow-lg border border-gray-200 px-4 py-2 min-w-[120px] text-center max-w-[200px] break-words z-10">
+                  <span className="text-gray-800 text-sm font-medium">{noteText || "Comparte un pensamiento..."}</span>
+                </div>
+              </div>
+              
+              <input 
+                autoFocus
+                maxLength={60}
+                value={noteText}
+                onChange={e => setNoteText(e.target.value)}
+                placeholder="Comparte un pensamiento..."
+                className="w-full border-2 border-gray-200 rounded-xl p-3 text-gray-900 text-center focus:border-blue-500 outline-none caret-black"
+              />
+              <p className="text-xs text-gray-500 text-center">Tus seguidores verán esto durante 24 horas y podrán responder con un mensaje.</p>
+            </div>
+            
+            <div className="p-4 border-t border-gray-200 flex gap-3">
+              <button onClick={() => setIsAddingNote(false)} className="flex-1 py-3 bg-gray-100 text-gray-900 font-bold rounded-xl active:bg-gray-200 transition-colors">Cancelar</button>
+              <button 
+                onClick={() => {
+                  if (noteText.trim()) {
+                    setNotes(prev => {
+                      const resto = prev.filter(n => n.user !== 'Usted');
+                      return [{ id: Date.now(), user: 'Usted', avatar: miAvatar, text: noteText.trim() }, ...resto];
+                    });
+                    llamarAlAngel("¡Su nota se ha publicado! Todos sus amigos podrán leerla en la parte superior de sus mensajes.");
+                  } else {
+                    setNotes(prev => prev.filter(n => n.user !== 'Usted'));
+                    llamarAlAngel("Ha eliminado su nota correctamente.");
+                  }
+                  setIsAddingNote(false);
+                }} 
+                className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl active:bg-blue-700 transition-colors"
+              >
+                {noteText.trim() ? "Compartir" : "Eliminar"}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -5,6 +5,7 @@ import { useAngel } from '../context/AngelContext.jsx';
 const FotoSocial = ({ post, onEnviarCariño, onEnviarMensaje, onGuardar, onShare }) => {
   const { llamarAlAngel } = useAngel();
   const [animarCorazon, setAnimarCorazon] = useState(false);
+  const [animarGuardar, setAnimarGuardar] = useState(false);
   const [comentarioLocal, setComentarioLocal] = useState('');
 
   const manejarDobleClic = (e) => {
@@ -39,6 +40,11 @@ const FotoSocial = ({ post, onEnviarCariño, onEnviarMensaje, onGuardar, onShare
              <IconHeart filled={true} className="w-32 h-32 text-white/90 anim-corazon drop-shadow-2xl" />
           </div>
         )}
+        {animarGuardar && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+             <IconBookmark saved={true} className="w-32 h-32 text-white/90 anim-corazon drop-shadow-2xl" />
+          </div>
+        )}
       </div>
 
       <div className="p-4">
@@ -54,7 +60,15 @@ const FotoSocial = ({ post, onEnviarCariño, onEnviarMensaje, onGuardar, onShare
               <IconPlane />
             </button>
           </div>
-          <button aria-label={post.isSaved ? "Quitar de guardados" : "Guardar foto"} onClick={(e) => { e.stopPropagation(); onGuardar(post.id); llamarAlAngel("Si toca esta cinta, la foto se guardará en su álbum personal secreto para que la vea cuando quiera. No se perderá."); }}>
+          <button aria-label={post.isSaved ? "Quitar de guardados" : "Guardar foto"} onClick={(e) => { 
+            e.stopPropagation(); 
+            onGuardar(post.id); 
+            if (!post.isSaved) {
+              setAnimarGuardar(true);
+              setTimeout(() => setAnimarGuardar(false), 1200);
+            }
+            llamarAlAngel("Si toca esta cinta, la foto se guardará en su álbum personal secreto para que la vea cuando quiera. No se perderá."); 
+          }}>
             <IconBookmark saved={post.isSaved} />
           </button>
         </div>

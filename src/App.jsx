@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Header from './components/Header';
 import BottomNav from './components/BottomNav';
-import { initialStories, initialMessages, initialPostsFeed, initialPostsVideos, initialChats } from './data/mockData';
+import { initialStories, initialMessages, initialPostsFeed, initialPostsVideos, initialChats, initialNotes } from './data/mockData';
 import { useAngelGuard } from './hooks/useAngelGuard';
 import { consultarAngelGuard } from './services/groqService';
 import { reproducirVoz } from './utils/speech';
@@ -34,7 +34,12 @@ export default function App() {
   const [activeStory, setActiveStory] = useState(null);
   const [stories, setStories] = useState(initialStories);
 
+  const [miAvatar, setMiAvatar] = useState('https://i.pravatar.cc/150?u=yo');
+  const [modoSubida, setModoSubida] = useState('post'); // 'post' o 'avatar'
+
   const [messages, setMessages] = useState(initialMessages);
+
+  const [notes, setNotes] = useState(initialNotes);
 
   const [postsFeed, setPostsFeed] = useState(initialPostsFeed);
 
@@ -145,7 +150,8 @@ export default function App() {
     llamarAlAngel(`Ahora está en un chat privado con ${chat.user}. Solo ustedes dos pueden ver estos mensajes. Escriba abajo para responderle.`);
   };
 
-  const triggerSubirFoto = () => {
+  const triggerSubirFoto = (modo = 'post') => {
+    setModoSubida(modo);
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
@@ -155,13 +161,23 @@ export default function App() {
     const file = e.target.files[0];
     if (file) {
       const imageUrl = URL.createObjectURL(file);
-      const nuevoPost = { id: Date.now(), user: 'Usted', avatar: 'https://i.pravatar.cc/150?u=yo', image: imageUrl, likes: 0, hasLiked: false, isSaved: false, caption: ' ¡Miren mi nueva foto!', comentarios: [] };
-      setPostsFeed(prev => [nuevoPost, ...prev]);
-      setSeccionActual('inicio');
-      llamarAlAngel("¡Felicidades! Su foto se ha publicado correctamente y sus familiares ya pueden verla en el inicio.");
-      // Limpiamos el input para permitir subir la misma foto otra vez si quiere
+      if (modoSubida === 'avatar') {
+        setMiAvatar(imageUrl);
+        setPostsFeed(prev => prev.map(p => p.user === 'Usted' ? { ...p, avatar: imageUrl } : p));
+        setStories(prev => prev.map(s => s.isMine ? { ...s, avatar: imageUrl } : s));
+        llamarAlAngel("¡Su foto de perfil se ha actualizado correctamente! Se ve muy bien.");
+      } else {
+        const nuevoPost = { id: Date.now(), user: 'Usted', avatar: miAvatar, image: imageUrl, likes: 0, hasLiked: false, isSaved: false, caption: ' ¡Miren mi nueva foto!', comentarios: [] };
+        setPostsFeed(prev => [nuevoPost, ...prev]);
+        setSeccionActual('inicio');
+        llamarAlAngel("¡Felicidades! Su foto se ha publicado correctamente y sus familiares ya pueden verla en el inicio.");
+      }
       e.target.value = '';
     }
+  };
+
+  const eliminarPost = (id) => {
+    setPostsFeed(prev => prev.filter(p => p.id !== id));
   };
 
   const iniciarEscucha = () => {
@@ -400,7 +416,7 @@ export default function App() {
               }}
               className="w-full bg-blue-600 text-white font-bold text-xl py-4 px-8 rounded-2xl shadow-lg hover:shadow-xl transition-all active:scale-95 hover:bg-blue-700"
             >
-              Empezar a explorar
+              Comenzar
             </button>
           </div>
         </div>
@@ -433,6 +449,7 @@ export default function App() {
             chatActivo={chatActivo} setChatActivo={setChatActivo} navegarA={navegarA} 
             chats={chats} setChats={setChats} abrirChat={abrirChat} 
             textoMensaje={textoMensaje} setTextoMensaje={setTextoMensaje} prepararEnvio={prepararEnvio} 
+            notes={notes} setNotes={setNotes} miAvatar={miAvatar}
           />
         )}
 
@@ -441,6 +458,9 @@ export default function App() {
             misPosts={postsFeed.filter(p => p.user === 'Usted')} 
             guardados={postsFeed.filter(p => p.isSaved)}
             onSubirFotoClick={triggerSubirFoto}
+            onEliminarFoto={eliminarPost}
+            miAvatar={miAvatar}
+            onCambiarAvatarClick={() => triggerSubirFoto('avatar')}
           />
         )}
 
@@ -482,7 +502,7 @@ export default function App() {
       {/* BOTÓN DE AYUDA (EL SALVAVIDAS SIEMPRE VISIBLE) */}
       <button 
         onClick={() => llamarAlAngel("¡Aquí estoy! No tenga miedo, dígame en qué puedo ayudarle hoy.")} 
-        className={`fixed right-4 sm:right-8 w-16 sm:w-20 h-16 sm:h-20 bg-blue-600 text-white rounded-full shadow-2xl border-4 border-white flex flex-col items-center justify-center animate-pulse z-50 transition-all hover:scale-110 ${
+        className={`fixed left-4 sm:left-8 w-16 sm:w-20 h-16 sm:h-20 bg-blue-600 text-white rounded-full shadow-2xl border-4 border-white flex flex-col items-center justify-center animate-pulse z-50 transition-all hover:scale-110 ${
           (seccionActual === 'mensajes' && chatActivo) ? 'bottom-4' : 'bottom-20 sm:bottom-24'
         }`}
       >
@@ -491,14 +511,22 @@ export default function App() {
 
       {/* VENTANA DEL ÁNGEL GUARDIÁN */}
       {isChatVisible && (
-        <div className="fixed bottom-4 left-4 right-4 md:inset-auto md:bottom-5 md:right-5 md:w-[450px] bg-white rounded-3xl md:rounded-[40px] shadow-[0_0_200px_rgba(0,0,0,0.7)] border-8 border-blue-600 flex flex-col z-[100] overflow-hidden max-h-[70vh] md:max-h-[85vh] animate-in slide-in-from-bottom duration-300">
+        <div className="fixed bottom-4 left-4 right-4 md:inset-auto md:bottom-5 md:left-5 md:w-[380px] lg:w-[420px] bg-white rounded-3xl md:rounded-[40px] shadow-[0_0_200px_rgba(0,0,0,0.7)] border-8 border-blue-600 flex flex-col z-[100] overflow-hidden max-h-[65vh] md:max-h-[75vh] animate-in slide-in-from-bottom duration-300">
           <header className="bg-blue-600 text-white p-4 sm:p-5 flex justify-between items-center shrink-0">
             <span className="font-black text-lg tracking-wide flex items-center gap-2">
               <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
               ANGELGUARD
             </span>
             <div className="flex gap-3 sm:gap-4 items-center">
-              <button onClick={() => { setIsMuted(!isMuted); hablarVoz(isMuted ? "Voz activada" : ""); }} className="text-2xl">{isMuted ? '🔇' : '🔊'}</button>
+              <button onClick={() => {
+                const newMutedState = !isMuted;
+                setIsMuted(newMutedState);
+                if (newMutedState) {
+                  window.speechSynthesis.cancel();
+                } else {
+                  reproducirVoz("Voz activada", false);
+                }
+              }} className="text-2xl">{isMuted ? '🔇' : '🔊'}</button>
               <button onClick={() => { setIsChatVisible(false); resetClickCount(); }} className="bg-white text-blue-800 px-4 py-2 rounded-xl font-bold text-sm shadow-md active:bg-gray-200">OCULTAR</button>
             </div>
           </header>

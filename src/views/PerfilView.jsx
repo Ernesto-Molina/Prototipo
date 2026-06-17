@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useAngel } from '../context/AngelContext.jsx';
-import { IconBookmark, IconMenu, IconPlus } from '../components/Icons';
+import { IconBookmark, IconMenu, IconPlus, IconTrash } from '../components/Icons';
 
-export default function PerfilView({ misPosts, guardados, onSubirFotoClick }) {
+export default function PerfilView({ misPosts, guardados, onSubirFotoClick, onEliminarFoto, miAvatar, onCambiarAvatarClick }) {
   const { llamarAlAngel } = useAngel();
   const [activeTab, setActiveTab] = useState('grid'); // 'grid' o 'saved'
   
+  const [postToDelete, setPostToDelete] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [nombre, setNombre] = useState('Usted');
   const [bio, setBio] = useState('Aprendiendo a usar Instagram con la ayuda de AngelGuard 😇');
@@ -60,9 +61,13 @@ export default function PerfilView({ misPosts, guardados, onSubirFotoClick }) {
       <div className="p-4 sm:p-6 border-b border-gray-200">
         <div className="flex items-center gap-6 mb-4">
           <img 
-            src="https://i.pravatar.cc/150?u=yo" 
+            src={miAvatar} 
             alt="Mi Perfil" 
-            className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-2 border-gray-200 p-0.5" 
+            className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-2 border-gray-200 p-0.5 cursor-pointer hover:opacity-90 active:opacity-80 transition-opacity"
+            onClick={() => {
+              onCambiarAvatarClick();
+              llamarAlAngel("Ha tocado su foto de perfil. Ahora puede elegir una nueva foto de su galería para reemplazarla.");
+            }}
           />
           <div className="flex flex-1 justify-between text-center">
             <div>
@@ -132,8 +137,19 @@ export default function PerfilView({ misPosts, guardados, onSubirFotoClick }) {
         <div className="grid grid-cols-3 gap-0.5 sm:gap-1">
           {misPosts.length > 0 ? (
             misPosts.map(post => (
-              <div key={post.id} className="aspect-square bg-gray-200 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => llamarAlAngel("Esta es una de las fotos que usted ha subido. ¡Se ve genial en su muro!")}>
+              <div key={post.id} className="relative aspect-square bg-gray-200 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => llamarAlAngel("Esta es una de las fotos que usted ha subido. ¡Se ve genial en su muro!")}>
                 <img src={post.image} alt="Publicación" className="w-full h-full object-cover" />
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPostToDelete(post);
+                    llamarAlAngel("¿Está seguro de que desea eliminar esta foto? Si lo hace, desaparecerá de su perfil y nadie más podrá verla.");
+                  }}
+                  className="absolute top-2 right-2 p-1.5 bg-black/40 text-white rounded-full hover:bg-red-500 transition-colors active:scale-95 shadow-sm"
+                  aria-label="Eliminar foto"
+                >
+                  <IconTrash className="w-5 h-5" />
+                </button>
               </div>
             ))
           ) : (
@@ -180,8 +196,8 @@ export default function PerfilView({ misPosts, guardados, onSubirFotoClick }) {
             
             <div className="p-5 flex flex-col gap-4">
               <div className="flex flex-col items-center mb-2">
-                <img src="https://i.pravatar.cc/150?u=yo" alt="Avatar" className="w-20 h-20 rounded-full object-cover border border-gray-200 mb-2" />
-                <span className="text-blue-500 font-semibold text-sm cursor-pointer" onClick={() => llamarAlAngel("Para cambiar su foto, use el botón de (+) en la esquina superior de la pantalla principal.")}>Cambiar foto de perfil</span>
+                <img src={miAvatar} alt="Avatar" className="w-20 h-20 rounded-full object-cover border border-gray-200 mb-2" />
+                <span className="text-blue-500 font-semibold text-sm cursor-pointer" onClick={() => { setIsEditing(false); onCambiarAvatarClick(); llamarAlAngel("Seleccione la nueva foto que desea usar."); }}>Cambiar foto de perfil</span>
               </div>
               
               <div className="flex flex-col gap-1.5">
@@ -263,6 +279,35 @@ export default function PerfilView({ misPosts, guardados, onSubirFotoClick }) {
                   Cerrar menú
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ELIMINAR FOTO */}
+      {postToDelete && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 flex flex-col items-center text-center p-6">
+            <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+              <IconTrash className="w-8 h-8" />
+            </div>
+            <h3 className="font-bold text-xl text-gray-900 mb-2">¿Eliminar foto?</h3>
+            <p className="text-gray-600 text-base mb-6">Esta acción no se puede deshacer. La foto desaparecerá de su perfil para siempre.</p>
+            
+            <div className="flex flex-col gap-3 w-full">
+              <button onClick={() => {
+                onEliminarFoto(postToDelete.id);
+                setPostToDelete(null);
+                llamarAlAngel("La foto ha sido eliminada correctamente de su perfil.");
+              }} className="w-full py-3 bg-red-600 text-white font-bold rounded-xl active:bg-red-700 transition-colors">
+                Sí, eliminar foto
+              </button>
+              <button onClick={() => {
+                setPostToDelete(null);
+                llamarAlAngel("No se preocupe, la foto está a salvo. Hemos cancelado la eliminación.");
+              }} className="w-full py-3 bg-gray-100 text-gray-900 font-bold rounded-xl active:bg-gray-200 transition-colors">
+                No, conservar foto
+              </button>
             </div>
           </div>
         </div>
